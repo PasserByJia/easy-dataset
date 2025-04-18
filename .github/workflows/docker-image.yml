@@ -22,6 +22,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Get version
+        id: get_version
+        run: |
+          # 如果是 release 触发，使用 release 的 tag 名
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          # 如果是 workflow_dispatch 触发，尝试使用输入参数
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          # 否则（如 push 触发），尝试获取最新的 Git tag
+          else
+            VERSION=$(git describe --tags --abbrev=0 || echo "latest")
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -41,5 +56,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:${{ steps.get_version.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:latest
