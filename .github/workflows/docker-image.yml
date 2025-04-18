@@ -56,5 +56,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:${{ steps.get_version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:1.2.5
             ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:latest
