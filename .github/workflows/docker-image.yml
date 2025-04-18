@@ -14,6 +14,9 @@ on:
       tags:
         description: "Test scenario tags"
 
+env:
+  REPOSITORY_NAME: ${{ github.repository.split('/')[1] }}
+
 jobs:
   build_docker:
     name: Build docker
@@ -41,5 +44,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ GITHUB_REPOSITORY_NAME_PART }}:${{ github.ref_name }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ GITHUB_REPOSITORY_NAME_PART }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ REPOSITORY_NAME }}:${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ REPOSITORY_NAME }}:latest
