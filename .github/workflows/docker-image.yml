@@ -2,7 +2,7 @@ name: build_docker
 
 on:
   push:
-    branches: [docker-build]
+    branches: [beta-docker-build]
   release:
     types: [created] # 表示在创建新的 Release 时触发
   workflow_dispatch:
@@ -56,5 +56,4 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:1.2.5
-            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/easy-dataset:1.3.0-beta.1
