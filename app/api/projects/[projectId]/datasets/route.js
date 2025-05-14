@@ -23,9 +23,10 @@ async function optimizeCot(originalQuestion, answer, originalCot, language, llmC
     language === 'en'
       ? getOptimizeCotEnPrompt(originalQuestion, answer, originalCot)
       : getOptimizeCotPrompt(originalQuestion, answer, originalCot);
-  const { answer: optimizedAnswer } = await llmClient.getResponseWithCOT(prompt);
-  await updateDataset({ id, cot: optimizedAnswer.replace('优化后的思维链', '') });
-  console.log(originalQuestion, id, 'Successfully optimized thought process');
+  const { answer: as, cot } = await llmClient.getResponseWithCOT(prompt);
+  const optimizedAnswer = as || cot;
+  const result = await updateDataset({ id, cot: optimizedAnswer.replace('优化后的思维链', '') });
+  console.log(originalQuestion, id, 'Successfully optimized thought process', result);
 }
 
 /**

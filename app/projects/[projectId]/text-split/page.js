@@ -90,7 +90,7 @@ export default function TextSplitPage({ params }) {
   };
 
   // 处理文件上传成功
-  const handleUploadSuccess = async (fileNames, pdfFiles) => {
+  const handleUploadSuccess = async (fileNames, pdfFiles, domainTreeAction) => {
     console.log(t('textSplit.fileUploadSuccess'), fileNames);
     //上传完处理PDF文件
     try {
@@ -105,8 +105,11 @@ export default function TextSplitPage({ params }) {
       });
 
       const currentLanguage = i18n.language === 'zh-CN' ? '中文' : 'en';
-      for (const file of pdfFiles) { // 关键修正：遍历过滤后的列表
-        const response = await fetch(`/api/projects/${projectId}/pdf?fileName=${encodeURIComponent(file.name)}&strategy=${pdfStrategy}&currentLanguage=${currentLanguage}&modelId=${selectedViosnModel}`);
+      for (const file of pdfFiles) {
+        // 关键修正：遍历过滤后的列表
+        const response = await fetch(
+          `/api/projects/${projectId}/pdf?fileName=${encodeURIComponent(file.name)}&strategy=${pdfStrategy}&currentLanguage=${currentLanguage}&modelId=${selectedViosnModel}`
+        );
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(t('textSplit.pdfProcessingFailed') + errorData.error);
@@ -141,12 +144,12 @@ export default function TextSplitPage({ params }) {
 
     // 如果有文件上传成功，自动处理第一个文件
     if (fileNames && fileNames.length > 0) {
-      handleSplitText(fileNames[0]);
+      handleSplitText(fileNames, domainTreeAction);
     }
   };
 
   // 处理文本分割
-  const handleSplitText = async fileName => {
+  const handleSplitText = async (fileNames, domainTreeAction = 'rebuild') => {
     try {
       setProcessing(true);
       const language = i18n.language === 'zh-CN' ? '中文' : 'en';
@@ -155,7 +158,7 @@ export default function TextSplitPage({ params }) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ fileName, model: selectedModelInfo, language })
+        body: JSON.stringify({ fileNames, model: selectedModelInfo, language, domainTreeAction })
       });
 
       if (!response.ok) {
@@ -273,13 +276,16 @@ export default function TextSplitPage({ params }) {
             // 获取当前语言环境
             const currentLanguage = i18n.language === 'zh-CN' ? '中文' : 'en';
 
-            const response = await request(`/api/projects/${projectId}/chunks/${encodeURIComponent(chunkId)}/questions`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ model, language: currentLanguage })
-            });
+            const response = await request(
+              `/api/projects/${projectId}/chunks/${encodeURIComponent(chunkId)}/questions`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ model, language: currentLanguage })
+              }
+            );
 
             if (!response.ok) {
               const errorData = await response.json();

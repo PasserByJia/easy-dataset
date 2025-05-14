@@ -32,7 +32,8 @@ import {
   Checkbox,
   LinearProgress,
   Select,
-  MenuItem
+  MenuItem,
+  TextField
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -351,22 +352,54 @@ const DatasetList = ({
         </Table>
       </TableContainer>
       <Divider />
-      <TablePagination
-        component="div"
-        count={Math.ceil(total / rowsPerPage)}
-        page={page}
-        onPageChange={onPageChange}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={onRowsPerPageChange}
-        labelRowsPerPage={t('datasets.rowsPerPage')}
-        labelDisplayedRows={({ from, to, count }) => t('datasets.pagination', { from, to, count })}
+      <Box
         sx={{
-          borderTop: `1px solid ${theme.palette.divider}`,
-          '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
-            fontWeight: 'medium'
-          }
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 2,
+          py: 1,
+          borderTop: `1px solid ${theme.palette.divider}`
         }}
-      />
+      >
+        <TablePagination
+          component="div"
+          count={total}
+          page={page - 1}
+          onPageChange={onPageChange}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={onRowsPerPageChange}
+          labelRowsPerPage={t('datasets.rowsPerPage')}
+          labelDisplayedRows={({ from, to, count }) => t('datasets.pagination', { from, to, count })}
+          sx={{
+            '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+              fontWeight: 'medium'
+            },
+            border: 'none'
+          }}
+        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2">{t('common.jumpTo')}:</Typography>
+          <TextField
+            size="small"
+            type="number"
+            inputProps={{
+              min: 1,
+              max: Math.ceil(total / rowsPerPage),
+              style: { padding: '4px 8px', width: '50px' }
+            }}
+            onKeyPress={e => {
+              if (e.key === 'Enter') {
+                const pageNum = parseInt(e.target.value, 10);
+                if (pageNum >= 1 && pageNum <= Math.ceil(total / rowsPerPage)) {
+                  onPageChange(null, pageNum - 1);
+                  e.target.value = '';
+                }
+              }
+            }}
+          />
+        </Box>
+      </Box>
     </Card>
   );
 };
@@ -534,12 +567,8 @@ export default function DatasetsPage({ params }) {
 
   // 处理页码变化
   const handlePageChange = (event, newPage) => {
-    console.log(newPage);
-    if (newPage <= 0) {
-      setPage(1);
-    } else {
-      setPage(newPage);
-    }
+    // MUI TablePagination 的页码从 0 开始，而我们的 API 从 1 开始
+    setPage(newPage + 1);
   };
 
   // 处理每页行数变化
@@ -565,9 +594,19 @@ export default function DatasetsPage({ params }) {
   };
 
   const handleBatchDeleteDataset = async () => {
+    if (selectedIds.length === 0) {
+      setSnackbar({
+        open: true,
+        message: t('datasets.noSelected'),
+        severity: 'warning'
+      });
+      return;
+    }
+
+    const datasetsArray = selectedIds.map(id => ({ id }));
     setDeleteDialog({
       open: true,
-      datasets: datasets.data.filter(dataset => selectedIds.includes(dataset.id)),
+      datasets: datasetsArray,
       batch: true,
       count: selectedIds.length
     });
@@ -603,14 +642,37 @@ export default function DatasetsPage({ params }) {
 
   // 批量删除数据集
   const handleBatchDelete = async () => {
-    // TODO: 并发删除存在问题，这里只能同时删除1个，待优化
-    await processInParallel(deleteDialog.datasets, handleDelete, 1, (cur, total) => {
-      setDeteleProgress({
-        total: total,
-        completed: cur,
-        percentage: Math.floor((cur / total) * 100)
+    try {
+      await processInParallel(
+        selectedIds,
+        async datasetId => {
+          await fetch(`/api/projects/${projectId}/datasets?id=${datasetId}`, {
+            method: 'DELETE'
+          });
+        },
+        3,
+        (cur, total) => {
+          setDeteleProgress({
+            total,
+            completed: cur,
+            percentage: Math.floor((cur / total) * 100)
+          });
+        }
+      );
+
+      setSnackbar({
+        open: true,
+        message: t('datasets.batchDeleteSuccess', { count: selectedIds.length }),
+        severity: 'success'
       });
-    });
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      setSnackbar({
+        open: true,
+        message: error.message || t('datasets.batchDeleteFailed'),
+        severity: 'error'
+      });
+    }
   };
 
   // 删除数据集
@@ -794,8 +856,9 @@ export default function DatasetsPage({ params }) {
   // 处理全选/取消全选
   const handleSelectAll = async event => {
     if (event.target.checked) {
+      // 获取所有符合当前筛选条件的数据，不受分页限制
       const response = await axios.get(
-        `/api/projects/${projectId}/datasets?page=${page}&size=${rowsPerPage}&status=${filterConfirmed}&input=${searchQuery}&selectedAll=1`
+        `/api/projects/${projectId}/datasets?status=${filterConfirmed}&input=${searchQuery}&selectedAll=1`
       );
       setselectedIds(response.data.map(dataset => dataset.id));
     } else {

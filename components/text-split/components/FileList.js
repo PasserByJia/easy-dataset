@@ -49,6 +49,18 @@ export default function FileList({
     setViewDialogOpen(false);
   };
 
+  // 刷新文本块列表
+  const refreshTextChunks = () => {
+    if (typeof setPageLoading === 'function') {
+      setPageLoading(true);
+      setTimeout(() => {
+        // 可能需要调用父组件的刷新方法
+        sendToFileUploader(array);
+        setPageLoading(false);
+      }, 500);
+    }
+  };
+
   const handleViewContent = async fileId => {
     getFileContent(fileId);
     setViewDialogOpen(true);
@@ -58,11 +70,11 @@ export default function FileList({
     setPageLoading(true);
     const text = await getFileContent(fileId);
 
-     // Modify the filename if it ends with .pdf
-     let downloadName = fileName || 'download.txt';
-     if (downloadName.toLowerCase().endsWith('.pdf')) {
-         downloadName = downloadName.slice(0, -4) + '.md';
-     }
+    // Modify the filename if it ends with .pdf
+    let downloadName = fileName || 'download.txt';
+    if (downloadName.toLowerCase().endsWith('.pdf')) {
+      downloadName = downloadName.slice(0, -4) + '.md';
+    }
 
     const blob = new Blob([text.content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -134,7 +146,7 @@ export default function FileList({
           </Typography>
         </Box>
       ) : (
-        <List sx={{ maxHeight: '220px', overflow: 'auto', width: '100%' }}>
+        <List sx={{ maxHeight: '200px', overflow: 'auto', width: '100%' }}>
           {files?.data?.map((file, index) => (
             <Box key={index}>
               <ListItem
@@ -155,7 +167,7 @@ export default function FileList({
                         <Download />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="删除文献">
+                    <Tooltip title={t('textSplit.deleteFile')}>
                       <IconButton color="error" onClick={() => onDeleteFile(file.id, file.fileName)}>
                         <DeleteIcon />
                       </IconButton>
@@ -177,7 +189,13 @@ export default function FileList({
         </List>
       )}
       {/* 文本块详情对话框 */}
-      <MarkdownViewDialog open={viewDialogOpen} text={viewContent} onClose={handleCloseViewDialog} />
+      <MarkdownViewDialog
+        open={viewDialogOpen}
+        text={viewContent}
+        onClose={handleCloseViewDialog}
+        projectId={projectId}
+        onSaveSuccess={refreshTextChunks}
+      />
     </Box>
   );
 }
